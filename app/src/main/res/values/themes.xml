@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Główny motyw aplikacji -->
+    <style name="Theme.FitTracker" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Motyw Splash Screena -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#0A0A0A</item> <!-- Kolor tła -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item> <!-- Twoja ikona -->
+        <item name="postSplashScreenTheme">@style/Theme.FitTracker</item>
+    </style>
+</resources>

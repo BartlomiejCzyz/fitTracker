@@ -1,0 +1,5 @@
+- obniżyć górę aplikacji bo wchodzi na interfejs telefonu
+- przy dodawaniu ćwiczeń do planu ekran powinien iść bardziej w dół bo obecnie się "blokuje"
+i przy 3-4 ćwiczeniu trzeba zamknąć klawiaturę żeby dodać kolejne ćwiczenie
+- dodać możliwość rozwinięcia dnia treningowego z dowelnej komurki nie tylko daty
+- w serii tekst "powt" jest przycięty na dole
