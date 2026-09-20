@@ -351,6 +351,41 @@ fun PlanDialog(
 
                 Text("Ćwiczenia w planie:", color = AccentGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold)
 
+                if (exercises.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp, bottom = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Spacer(modifier = Modifier.width(18.dp))
+                        Text(
+                            text = "Nazwa ćwiczenia",
+                            fontSize = 11.sp,
+                            color = TextMuted,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "Serie",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AccentGreen,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.width(52.dp)
+                        )
+                        Text(
+                            text = "Powt.",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = NeonPurple,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.width(52.dp)
+                        )
+                        Spacer(modifier = Modifier.width(24.dp))
+                    }
+                }
+
                 exercises.forEachIndexed { index, exercise ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -411,7 +446,7 @@ fun PlanDialog(
                             },
                             placeholder = { Text("Serie", fontSize = 10.sp, color = TextMuted) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.width(50.dp),
+                            modifier = Modifier.width(52.dp),
                             singleLine = true,
                             textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, textAlign = TextAlign.Center),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -428,7 +463,7 @@ fun PlanDialog(
                             },
                             placeholder = { Text("Powt.", fontSize = 10.sp, color = TextMuted) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.width(50.dp),
+                            modifier = Modifier.width(52.dp),
                             singleLine = true,
                             textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, textAlign = TextAlign.Center),
                             colors = OutlinedTextFieldDefaults.colors(
