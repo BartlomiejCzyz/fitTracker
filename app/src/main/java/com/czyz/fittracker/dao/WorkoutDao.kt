@@ -47,6 +47,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM workouts WHERE planId = :planId ORDER BY dateTimestamp ASC")
     fun getWorkoutsForPlan(planId: Int): Flow<List<WorkoutEntity>>
 
+    @Query("SELECT * FROM workouts WHERE planId = :planId ORDER BY dateTimestamp ASC")
+    suspend fun getWorkoutsForPlanOnce(planId: Int): List<WorkoutEntity>
+
 
     // ==========================================
     // 3. ŁĄCZNIK TRENING-ĆWICZENIE (WorkoutExerciseEntity)

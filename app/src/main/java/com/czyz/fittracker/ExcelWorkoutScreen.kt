@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -51,7 +52,7 @@ val TextMuted = Color(0xFF777777)
 
 // --- MODELE DANYCH UI ---
 data class ExerciseUi(
-    val id: Int,
+    val id: Int = 0,
     var name: String,
     var targetReps: Int
 )
@@ -81,7 +82,7 @@ fun MainAppNavigation(viewModel: WorkoutViewModel) {
                         planId = planToEdit?.workoutPlanId,
                         title = name,
                         description = description,
-                        exercises = exercises.map { it.name to it.targetReps }
+                        exercises = exercises
                     )
                 },
                 onDeletePlan = { planEntity ->
@@ -432,8 +433,7 @@ fun PlanDialog(
 
                 TextButton(
                     onClick = {
-                        val newId = (exercises.maxOfOrNull { it.id } ?: 0) + 1
-                        exercises.add(ExerciseUi(newId, "", 10))
+                        exercises.add(ExerciseUi(0, "", 10))
                     },
                     modifier = Modifier.align(Alignment.Start)
                 ) {
@@ -485,6 +485,7 @@ fun ExcelWorkoutScreen(
     }
 
     var expandedDayId by remember { mutableStateOf<Int?>(null) }
+    var exerciseToEdit by remember { mutableStateOf<ExerciseEntity?>(null) }
 
     val horizontalScrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
@@ -655,24 +656,35 @@ fun ExcelWorkoutScreen(
                             Box(
                                 modifier = Modifier
                                     .width(140.dp)
-                                    .height(80.dp)
+                                    .height(90.dp)
                                     .border(0.5.dp, BorderDark)
                                     .background(DarkSurface)
+                                    .clickable { exerciseToEdit = exercise }
                                     .padding(8.dp),
                                 contentAlignment = Alignment.CenterStart
                             ) {
-                                Column {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = exercise.name,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 13.sp,
+                                            color = TextWhite,
+                                            maxLines = 2
+                                        )
+                                        Text(
+                                            text = "Cel: ${exercise.targetRepetitions} powt.",
+                                            fontSize = 11.sp,
+                                            color = NeonPurple
+                                        )
+                                    }
                                     Text(
-                                        text = exercise.name,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 13.sp,
-                                        color = TextWhite,
-                                        maxLines = 2
-                                    )
-                                    Text(
-                                        text = "Cel: ${exercise.targetRepetitions} powt.",
-                                        fontSize = 11.sp,
-                                        color = NeonPurple
+                                        text = "✎ Edytuj",
+                                        fontSize = 10.sp,
+                                        color = TextMuted
                                     )
                                 }
                             }
@@ -699,17 +711,17 @@ fun ExcelWorkoutScreen(
                                             }
                                         },
                                         onSetUpdate = { setIndex, newWeight, newReps ->
-                                            if (workoutExerciseId != 0) {
-                                                val existingSet = sets.find { it.setNumber == setIndex + 1 }
-                                                val setId = existingSet?.setId ?: 0
-                                                viewModel.updateSetData(
-                                                    setId = setId,
-                                                    workoutExerciseId = workoutExerciseId,
-                                                    setNumber = setIndex + 1,
-                                                    weight = newWeight,
-                                                    reps = newReps
-                                                )
-                                            }
+                                            val existingSet = sets.find { it.setNumber == setIndex + 1 }
+                                            val setId = existingSet?.setId ?: 0
+                                            viewModel.updateSetData(
+                                                workoutId = workoutWithDetails.workout.workoutId,
+                                                exerciseId = exercise.exerciseId,
+                                                setId = setId,
+                                                workoutExerciseId = workoutExerciseId,
+                                                setNumber = setIndex + 1,
+                                                weight = newWeight,
+                                                reps = newReps
+                                            )
                                         }
                                     )
                                 }
@@ -717,7 +729,7 @@ fun ExcelWorkoutScreen(
                                 Box(
                                     modifier = Modifier
                                         .width(60.dp)
-                                        .height(80.dp)
+                                        .height(90.dp)
                                         .border(0.5.dp, BorderDark)
                                 )
                             }
@@ -725,6 +737,21 @@ fun ExcelWorkoutScreen(
                     }
                 }
             }
+        }
+
+        if (exerciseToEdit != null) {
+            EditExerciseDialog(
+                exercise = exerciseToEdit!!,
+                onDismiss = { exerciseToEdit = null },
+                onSave = { newName, newReps ->
+                    viewModel.updateExercise(exerciseToEdit!!.exerciseId, newName, newReps)
+                    exerciseToEdit = null
+                },
+                onDelete = {
+                    viewModel.deleteExercise(exerciseToEdit!!)
+                    exerciseToEdit = null
+                }
+            )
         }
     }
 }
@@ -772,7 +799,7 @@ fun DayDataCell(
         Box(
             modifier = Modifier
                 .width(70.dp)
-                .height(80.dp)
+                .height(90.dp)
                 .border(0.5.dp, BorderDark)
                 .background(DarkBackground)
                 .clickable { onToggleExpand() },
@@ -795,7 +822,7 @@ fun DayDataCell(
         Row(
             modifier = Modifier
                 .width(180.dp)
-                .height(80.dp)
+                .height(90.dp)
                 .border(0.5.dp, BorderDark)
                 .background(DarkBackground)
         ) {
@@ -869,6 +896,7 @@ fun MiniNumberInput(
                 }
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            cursorBrush = SolidColor(AccentGreen),
             singleLine = true,
             textStyle = LocalTextStyle.current.copy(
                 fontSize = 11.sp,
@@ -895,4 +923,88 @@ fun MiniNumberInput(
         }
     }
 
+}
+
+// ============================================
+// OKNO DIALOGOWE: BEZPOŚREDNIA EDYCJA ĆWICZENIA
+// ============================================
+@Composable
+fun EditExerciseDialog(
+    exercise: ExerciseEntity,
+    onDismiss: () -> Unit,
+    onSave: (name: String, targetReps: Int) -> Unit,
+    onDelete: () -> Unit
+) {
+    var name by remember { mutableStateOf(exercise.name) }
+    var targetRepsStr by remember {
+        mutableStateOf(if (exercise.targetRepetitions > 0) exercise.targetRepetitions.toString() else "")
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkSurfaceHeader,
+        title = {
+            Text(
+                text = "Edytuj ćwiczenie",
+                color = AccentGreen,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nazwa ćwiczenia", color = TextMuted) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentGreen,
+                        unfocusedBorderColor = BorderDark,
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite,
+                        focusedLabelColor = AccentGreen
+                    )
+                )
+                OutlinedTextField(
+                    value = targetRepsStr,
+                    onValueChange = { targetRepsStr = it },
+                    label = { Text("Cel powtórzeń", color = TextMuted) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentGreen,
+                        unfocusedBorderColor = BorderDark,
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite,
+                        focusedLabelColor = AccentGreen
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (name.isNotBlank()) {
+                        val parsedReps = targetRepsStr.toIntOrNull() ?: exercise.targetRepetitions
+                        onSave(name, parsedReps)
+                    }
+                }
+            ) {
+                Text("Zapisz", color = AccentGreen, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDelete) {
+                    Text("Usuń z planu", color = DangerRed, fontWeight = FontWeight.Bold)
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Anuluj", color = TextMuted)
+                }
+            }
+        }
+    )
 }

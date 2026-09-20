@@ -37,6 +37,10 @@ class WorkoutRepository(private val workoutDao: WorkoutDao) {
         return workoutDao.getWorkoutsForPlan(planId)
     }
 
+    suspend fun getWorkoutsForPlanOnce(planId: Int): List<WorkoutEntity> {
+        return workoutDao.getWorkoutsForPlanOnce(planId)
+    }
+
     fun getWorkoutWithDetails(workoutId: Int): Flow<WorkoutWithDetails?> {
         return workoutDao.getWorkoutWithDetails(workoutId)
     }

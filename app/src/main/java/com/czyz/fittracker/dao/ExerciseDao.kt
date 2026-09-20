@@ -30,11 +30,11 @@ interface ExerciseDao {
     fun getAllExercises(): Flow<List<ExerciseEntity>>
 
     // Pobiera ćwiczenia przypisane do konkretnego planu
-    @Query("SELECT * FROM exercises WHERE planId = :planId ORDER BY exerciseId ASC")
+    @Query("SELECT * FROM exercises WHERE planId = :planId ORDER BY sortOrder ASC, exerciseId ASC")
     fun getExercisesForPlan(planId: Int): Flow<List<ExerciseEntity>>
 
     // Pobiera (suspend) ćwiczenia przypisane do konkretnego planu
-    @Query("SELECT * FROM exercises WHERE planId = :planId ORDER BY exerciseId ASC")
+    @Query("SELECT * FROM exercises WHERE planId = :planId ORDER BY sortOrder ASC, exerciseId ASC")
     suspend fun getExercisesForPlanOnce(planId: Int): List<ExerciseEntity>
 
     // Usuwa wszystkie ćwiczenia przypisane do danego planu (pomocnicze przy aktualizacji)

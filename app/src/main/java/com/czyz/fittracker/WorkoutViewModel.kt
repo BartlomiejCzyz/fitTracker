@@ -54,7 +54,7 @@ class WorkoutViewModel(
         planId: Int?,
         title: String,
         description: String,
-        exercises: List<Pair<String, Int>> // Nazwa, TargetReps
+        exercises: List<ExerciseUi>
     ) {
         viewModelScope.launch {
             val isNew = planId == null || planId == 0
@@ -75,42 +75,94 @@ class WorkoutViewModel(
 
             // Pobierz dotychczasowe ćwiczenia TYLKO tego planu
             val existingExercises = exerciseRepository.getExercisesForPlanOnce(targetPlanId)
-            val existingByName = existingExercises.associateBy { it.name.trim().lowercase() }
-            val newNamesSet = exercises.map { it.first.trim().lowercase() }.toSet()
+            val existingById = existingExercises.associateBy { it.exerciseId }
+            val remainingExistingIds = mutableSetOf<Int>()
 
-            // 1. Zaktualizuj istniejące lub dodaj nowe ćwiczenia (z planId!)
-            exercises.forEach { (name, targetReps) ->
-                val trimmedName = name.trim()
+            // 1. Zaktualizuj istniejące lub dodaj nowe ćwiczenia (z zachowaniem sortOrder)
+            exercises.forEachIndexed { index, exerciseUi ->
+                val trimmedName = exerciseUi.name.trim()
                 if (trimmedName.isNotBlank()) {
-                    val existing = existingByName[trimmedName.lowercase()]
-                    if (existing != null) {
+                    if (exerciseUi.id > 0 && existingById.containsKey(exerciseUi.id)) {
+                        // Istniejące ćwiczenie — aktualizacja nazwy, celu i kolejności w miejscu!
+                        val existing = existingById[exerciseUi.id]!!
                         exerciseRepository.updateExercise(
-                            existing.copy(name = trimmedName, targetRepetitions = targetReps)
-                        )
-                    } else {
-                        exerciseRepository.insertExercise(
-                            ExerciseEntity(
+                            existing.copy(
                                 name = trimmedName,
-                                targetRepetitions = targetReps,
-                                targetWeight = 0.0,
-                                planId = targetPlanId
+                                targetRepetitions = exerciseUi.targetReps,
+                                sortOrder = index
                             )
                         )
+                        remainingExistingIds.add(exerciseUi.id)
+                    } else {
+                        // Nowe ćwiczenie — dodanie do bazy
+                        val newExerciseId = exerciseRepository.insertExercise(
+                            ExerciseEntity(
+                                name = trimmedName,
+                                targetRepetitions = exerciseUi.targetReps,
+                                targetWeight = 0.0,
+                                sortOrder = index,
+                                planId = targetPlanId
+                            )
+                        ).toInt()
+
+                        // Dodaj to nowe ćwiczenie do już istniejących dni treningowych tego planu
+                        val existingWorkouts = workoutRepository.getWorkoutsForPlanOnce(targetPlanId)
+                        existingWorkouts.forEach { workout ->
+                            val workoutExerciseId = workoutRepository.addExerciseToWorkout(
+                                workoutId = workout.workoutId,
+                                exerciseId = newExerciseId
+                            ).toInt()
+
+                            for (setNum in 1..3) {
+                                workoutRepository.addSet(
+                                    workoutExerciseId = workoutExerciseId,
+                                    setNumber = setNum,
+                                    weight = 0.0,
+                                    reps = 0
+                                )
+                            }
+                        }
                     }
                 }
             }
 
             // 2. Bezpiecznie usuń ćwiczenia tego planu, których nie ma już w formularzu
-            //    i które NIE są użyte w żadnej sesji (ForeignKey RESTRICT nie pozwoli)
             existingExercises.forEach { existing ->
-                if (existing.name.trim().lowercase() !in newNamesSet) {
-                    // deleteUnusedExercisesForPlan usuwa tylko te bez sesji — bezpieczne
+                if (existing.exerciseId !in remainingExistingIds) {
                     try {
                         exerciseRepository.deleteExercise(existing)
                     } catch (e: Exception) {
-                        // Ćwiczenie jest użyte w sesji — zostaw je (nie kasuj danych treningowych)
+                        // Jeśli ćwiczenie jest użyte w sesji (ForeignKey RESTRICT nie pozwoli usunąć),
+                        // odpinamy je od tego planu (planId = 0), aby zniknęło z widoku planu,
+                        // zachowując jednocześnie historię wpisanych serii treningowych
+                        exerciseRepository.updateExercise(existing.copy(planId = 0))
                     }
                 }
+            }
+        }
+    }
+
+    fun updateExercise(exerciseId: Int, name: String, targetReps: Int) {
+        viewModelScope.launch {
+            val existing = exerciseRepository.getExerciseById(exerciseId)
+            if (existing != null) {
+                exerciseRepository.updateExercise(
+                    existing.copy(
+                        name = name.trim(),
+                        targetRepetitions = targetReps
+                    )
+                )
+            }
+        }
+    }
+
+    fun deleteExercise(exercise: ExerciseEntity) {
+        viewModelScope.launch {
+            try {
+                exerciseRepository.deleteExercise(exercise)
+            } catch (e: Exception) {
+                // Jeśli ćwiczenie jest powiązane z sesjami treningowymi, odpinamy od planu
+                exerciseRepository.updateExercise(exercise.copy(planId = 0))
             }
         }
     }
@@ -160,20 +212,35 @@ class WorkoutViewModel(
         }
     }
 
-    fun updateSetData(setId: Int, workoutExerciseId: Int, setNumber: Int, weight: Double, reps: Int) {
+    fun updateSetData(
+        workoutId: Int = 0,
+        exerciseId: Int = 0,
+        setId: Int,
+        workoutExerciseId: Int,
+        setNumber: Int,
+        weight: Double,
+        reps: Int
+    ) {
         viewModelScope.launch {
-            if (setId == 0) {
-                workoutRepository.addSet(workoutExerciseId, setNumber, weight, reps)
+            val targetWorkoutExerciseId = if (workoutExerciseId == 0 && workoutId != 0 && exerciseId != 0) {
+                workoutRepository.addExerciseToWorkout(workoutId, exerciseId).toInt()
             } else {
-                workoutRepository.updateSet(
-                    ExerciseSetEntity(
-                        setId = setId,
-                        workoutExerciseId = workoutExerciseId,
-                        setNumber = setNumber,
-                        weightKg = weight,
-                        reps = reps
+                workoutExerciseId
+            }
+            if (targetWorkoutExerciseId != 0) {
+                if (setId == 0) {
+                    workoutRepository.addSet(targetWorkoutExerciseId, setNumber, weight, reps)
+                } else {
+                    workoutRepository.updateSet(
+                        ExerciseSetEntity(
+                            setId = setId,
+                            workoutExerciseId = targetWorkoutExerciseId,
+                            setNumber = setNumber,
+                            weightKg = weight,
+                            reps = reps
+                        )
                     )
-                )
+                }
             }
         }
     }
