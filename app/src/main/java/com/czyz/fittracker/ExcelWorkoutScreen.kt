@@ -44,7 +44,7 @@ val DarkBackground = Color(0xFF0A0A0A)
 val DarkSurface = Color(0xFF141414)
 val DarkSurfaceHeader = Color(0xFF1E1E1E)
 val AccentGreen = Color(0xFF4CAF50)
-val NeonPurple = Color(0xFFB388FF)
+val NeonPurple = Color(0xFF7245FA)
 val DangerRed = Color(0xFFE53935)
 val BorderDark = Color(0xFF2A2A2A)
 val TextWhite = Color(0xFFE0E0E0)
@@ -54,7 +54,8 @@ val TextMuted = Color(0xFF777777)
 data class ExerciseUi(
     val id: Int = 0,
     var name: String,
-    var targetReps: Int
+    var targetReps: Int,
+    var targetSets: Int = 3
 )
 
 // --- ZARZĄDCA EKRANÓW ---
@@ -301,7 +302,7 @@ fun PlanDialog(
     LaunchedEffect(initialExercises) {
         if (!exercisesLoaded && initialExercises.isNotEmpty()) {
             exercises.clear()
-            exercises.addAll(initialExercises.map { ExerciseUi(it.exerciseId, it.name, it.targetRepetitions) })
+            exercises.addAll(initialExercises.map { ExerciseUi(it.exerciseId, it.name, it.targetRepetitions, it.targetSets) })
             exercisesLoaded = true
         } else if (!exercisesLoaded && planToEdit == null) {
             // Nowy plan — nie ładujemy niczego, lista zaczyna pusta
@@ -403,14 +404,31 @@ fun PlanDialog(
                         )
 
                         OutlinedTextField(
+                            value = if (exercise.targetSets > 0) exercise.targetSets.toString() else "",
+                            onValueChange = { sets ->
+                                val parsed = sets.toIntOrNull() ?: 0
+                                exercises[index] = exercise.copy(targetSets = parsed)
+                            },
+                            placeholder = { Text("Serie", fontSize = 10.sp, color = TextMuted) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.width(50.dp),
+                            singleLine = true,
+                            textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, textAlign = TextAlign.Center),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AccentGreen, unfocusedBorderColor = BorderDark,
+                                focusedTextColor = TextWhite, unfocusedTextColor = TextWhite
+                            )
+                        )
+
+                        OutlinedTextField(
                             value = if (exercise.targetReps > 0) exercise.targetReps.toString() else "",
                             onValueChange = { reps ->
                                 val parsed = reps.toIntOrNull() ?: 0
                                 exercises[index] = exercise.copy(targetReps = parsed)
                             },
-                            placeholder = { Text("Cel", fontSize = 11.sp, color = TextMuted) },
+                            placeholder = { Text("Powt.", fontSize = 10.sp, color = TextMuted) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.width(60.dp),
+                            modifier = Modifier.width(50.dp),
                             singleLine = true,
                             textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, textAlign = TextAlign.Center),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -433,7 +451,7 @@ fun PlanDialog(
 
                 TextButton(
                     onClick = {
-                        exercises.add(ExerciseUi(0, "", 10))
+                        exercises.add(ExerciseUi(0, "", 10, 3))
                     },
                     modifier = Modifier.align(Alignment.Start)
                 ) {
@@ -676,7 +694,7 @@ fun ExcelWorkoutScreen(
                                             maxLines = 2
                                         )
                                         Text(
-                                            text = "Cel: ${exercise.targetRepetitions} powt.",
+                                            text = "${exercise.targetSets} serie • ${exercise.targetRepetitions} powt.",
                                             fontSize = 11.sp,
                                             color = NeonPurple
                                         )
@@ -743,8 +761,8 @@ fun ExcelWorkoutScreen(
             EditExerciseDialog(
                 exercise = exerciseToEdit!!,
                 onDismiss = { exerciseToEdit = null },
-                onSave = { newName, newReps ->
-                    viewModel.updateExercise(exerciseToEdit!!.exerciseId, newName, newReps)
+                onSave = { newName, newReps, newSets ->
+                    viewModel.updateExercise(exerciseToEdit!!.exerciseId, newName, newReps, newSets)
                     exerciseToEdit = null
                 },
                 onDelete = {
@@ -932,12 +950,15 @@ fun MiniNumberInput(
 fun EditExerciseDialog(
     exercise: ExerciseEntity,
     onDismiss: () -> Unit,
-    onSave: (name: String, targetReps: Int) -> Unit,
+    onSave: (name: String, targetReps: Int, targetSets: Int) -> Unit,
     onDelete: () -> Unit
 ) {
     var name by remember { mutableStateOf(exercise.name) }
     var targetRepsStr by remember {
         mutableStateOf(if (exercise.targetRepetitions > 0) exercise.targetRepetitions.toString() else "")
+    }
+    var targetSetsStr by remember {
+        mutableStateOf(if (exercise.targetSets > 0) exercise.targetSets.toString() else "3")
     }
 
     AlertDialog(
@@ -968,20 +989,41 @@ fun EditExerciseDialog(
                         focusedLabelColor = AccentGreen
                     )
                 )
-                OutlinedTextField(
-                    value = targetRepsStr,
-                    onValueChange = { targetRepsStr = it },
-                    label = { Text("Cel powtórzeń", color = TextMuted) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentGreen,
-                        unfocusedBorderColor = BorderDark,
-                        focusedTextColor = TextWhite,
-                        unfocusedTextColor = TextWhite,
-                        focusedLabelColor = AccentGreen
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = targetSetsStr,
+                        onValueChange = { targetSetsStr = it },
+                        label = { Text("Serie", color = TextMuted) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AccentGreen,
+                            unfocusedBorderColor = BorderDark,
+                            focusedTextColor = TextWhite,
+                            unfocusedTextColor = TextWhite,
+                            focusedLabelColor = AccentGreen
+                        )
                     )
-                )
+                    OutlinedTextField(
+                        value = targetRepsStr,
+                        onValueChange = { targetRepsStr = it },
+                        label = { Text("Powtórzenia", color = TextMuted) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AccentGreen,
+                            unfocusedBorderColor = BorderDark,
+                            focusedTextColor = TextWhite,
+                            unfocusedTextColor = TextWhite,
+                            focusedLabelColor = AccentGreen
+                        )
+                    )
+                }
             }
         },
         confirmButton = {
@@ -989,7 +1031,8 @@ fun EditExerciseDialog(
                 onClick = {
                     if (name.isNotBlank()) {
                         val parsedReps = targetRepsStr.toIntOrNull() ?: exercise.targetRepetitions
-                        onSave(name, parsedReps)
+                        val parsedSets = targetSetsStr.toIntOrNull() ?: exercise.targetSets
+                        onSave(name, parsedReps, parsedSets)
                     }
                 }
             ) {

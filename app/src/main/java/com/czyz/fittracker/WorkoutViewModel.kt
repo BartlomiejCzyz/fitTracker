@@ -89,6 +89,7 @@ class WorkoutViewModel(
                             existing.copy(
                                 name = trimmedName,
                                 targetRepetitions = exerciseUi.targetReps,
+                                targetSets = exerciseUi.targetSets,
                                 sortOrder = index
                             )
                         )
@@ -101,7 +102,8 @@ class WorkoutViewModel(
                                 targetRepetitions = exerciseUi.targetReps,
                                 targetWeight = 0.0,
                                 sortOrder = index,
-                                planId = targetPlanId
+                                planId = targetPlanId,
+                                targetSets = exerciseUi.targetSets
                             )
                         ).toInt()
 
@@ -142,14 +144,15 @@ class WorkoutViewModel(
         }
     }
 
-    fun updateExercise(exerciseId: Int, name: String, targetReps: Int) {
+    fun updateExercise(exerciseId: Int, name: String, targetReps: Int, targetSets: Int = 3) {
         viewModelScope.launch {
             val existing = exerciseRepository.getExerciseById(exerciseId)
             if (existing != null) {
                 exerciseRepository.updateExercise(
                     existing.copy(
                         name = name.trim(),
-                        targetRepetitions = targetReps
+                        targetRepetitions = targetReps,
+                        targetSets = targetSets
                     )
                 )
             }

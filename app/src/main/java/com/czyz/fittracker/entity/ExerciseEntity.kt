@@ -10,5 +10,6 @@ data class ExerciseEntity(
     val targetRepetitions: Int,
     val targetWeight: Double,
     val sortOrder: Int = 0,
-    val planId: Int = 0
+    val planId: Int = 0,
+    val targetSets: Int = 3
 )
