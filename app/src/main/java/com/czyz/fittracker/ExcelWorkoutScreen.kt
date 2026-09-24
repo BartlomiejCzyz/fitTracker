@@ -1,5 +1,6 @@
 package com.czyz.fittracker
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
@@ -21,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -31,6 +33,7 @@ import com.czyz.fittracker.entity.ExerciseEntity
 import com.czyz.fittracker.entity.ExerciseSetEntity
 import com.czyz.fittracker.entity.WorkoutPlanEntity
 import com.czyz.fittracker.entity.WorkoutWithDetails
+import com.czyz.fittracker.timer.RestTimerManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -243,7 +246,7 @@ fun PlanCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
@@ -260,12 +263,15 @@ fun PlanCard(
                     fontSize = 13.sp,
                     color = TextWhite
                 )
+                /*
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "Liczba ćwiczeń: $exerciseCount",
                     fontSize = 11.sp,
                     color = TextMuted
                 )
+                */
+
             }
 
             Text(
@@ -531,6 +537,9 @@ fun ExcelWorkoutScreen(
     planExercises: List<ExerciseEntity>,
     onBackClick: () -> Unit
 ) {
+    BackHandler {
+        onBackClick()
+    }
     val workoutsWithDetails by viewModel.workoutsWithDetails.collectAsState()
 
     val planWorkouts = remember(workoutsWithDetails, plan.workoutPlanId) {
@@ -848,6 +857,7 @@ fun DayDataCell(
     onToggleExpand: () -> Unit,
     onSetUpdate: (setIndex: Int, weight: Double, reps: Int) -> Unit
 ) {
+    val context = LocalContext.current
     if (!isExpanded) {
         Box(
             modifier = Modifier
@@ -858,11 +868,11 @@ fun DayDataCell(
                 .clickable { onToggleExpand() },
             contentAlignment = Alignment.Center
         ) {
-            val firstSet = sets.firstOrNull { it.weightKg > 0 || it.reps > 0 } ?: sets.firstOrNull()
-            if (firstSet != null && (firstSet.weightKg > 0 || firstSet.reps > 0)) {
-                val weightStr = if (firstSet.weightKg % 1.0 == 0.0) firstSet.weightKg.toInt().toString() else firstSet.weightKg.toString()
+            val lastSet = sets.lastOrNull() { it.weightKg > 0 || it.reps > 0 } ?: sets.lastOrNull()
+            if (lastSet != null && (lastSet.weightKg > 0 || lastSet.reps > 0)) {
+                val weightStr = if (lastSet.weightKg % 1.0 == 0.0) lastSet.weightKg.toInt().toString() else lastSet.weightKg.toString()
                 Text(
-                    text = "${weightStr}kg\nx${firstSet.reps}",
+                    text = "${weightStr}kg\nx${lastSet.reps}",
                     fontSize = 11.sp,
                     color = AccentGreen,
                     textAlign = TextAlign.Center
@@ -915,6 +925,10 @@ fun DayDataCell(
                         onValueChange = { newStr ->
                             val parsedReps = newStr.toIntOrNull() ?: 0
                             onSetUpdate(setIndex, weightVal, parsedReps)
+
+                            if (parsedReps > 0) {
+                                RestTimerManager.startTimer(context, 3 * 1000L)
+                            }
                         }
                     )
                 }
