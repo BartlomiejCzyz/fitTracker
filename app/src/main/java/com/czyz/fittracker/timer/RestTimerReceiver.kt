@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import com.czyz.fittracker.MainActivity
 import kotlin.apply
 
+
 class RestTimerReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {

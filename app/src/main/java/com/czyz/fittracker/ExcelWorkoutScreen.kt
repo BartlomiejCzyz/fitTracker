@@ -927,7 +927,7 @@ fun DayDataCell(
                             onSetUpdate(setIndex, weightVal, parsedReps)
 
                             if (parsedReps > 0) {
-                                RestTimerManager.startTimer(context, 3 * 1000L)
+                                RestTimerManager.startTimer(context, 3 * 60 * 1000L)
                             }
                         }
                     )

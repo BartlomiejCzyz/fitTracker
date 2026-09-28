@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.SystemClock
 
 object RestTimerManager {
 
@@ -22,14 +23,14 @@ object RestTimerManager {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val triggerAtMillis = System.currentTimeMillis() + durationMillis
+        val triggerAtMillis = SystemClock.elapsedRealtime() + durationMillis
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 // Sprawdzenie uprawnienia dla Androida 12+
                 if (alarmManager.canScheduleExactAlarms()) {
                     alarmManager.setExactAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
+                        AlarmManager.ELAPSED_REALTIME_WAKEUP,
                         triggerAtMillis,
                         pendingIntent
                     )
@@ -43,13 +44,13 @@ object RestTimerManager {
                 }
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
                     triggerAtMillis,
                     pendingIntent
                 )
             } else {
                 alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
                     triggerAtMillis,
                     pendingIntent
                 )
@@ -57,7 +58,7 @@ object RestTimerManager {
         } catch (e: SecurityException) {
             // Zabezpieczenie na wypadek braku uprawnień na poziomie systemu
             alarmManager.setAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 triggerAtMillis,
                 pendingIntent
             )
