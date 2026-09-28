@@ -7,7 +7,7 @@
   **Modern, spreadsheet-inspired workout logger & progression tracker built with Jetpack Compose and Room.**
 
 ---
-
+</div>
 ## About The Project
 
 Most traditional workout loggers suffer from **modal fatigue** and high input friction—requiring athletes to navigate deep menu trees, press multiple confirmation popups, and click between fragmented screens just to record a single set.
